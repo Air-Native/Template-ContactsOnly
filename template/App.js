@@ -755,9 +755,10 @@ class App extends Component {
     if (!url) return;
 
     if (
-      url.indexOf(hostURL) === -1 &&
-      url.indexOf(scheme) === -1 &&
-      url.indexOf('auth') === -1
+      !url.includes(hostURL) &&
+      !url.includes(scheme) &&
+      !url.includes('auth') &&
+      !url.includes('.bubbleapps.io/api/1.1/oauth_redirect')
     ) {
       this.webview.stopLoading();
       InAppBrowser.isAvailable().then(available => {
