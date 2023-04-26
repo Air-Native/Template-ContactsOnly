@@ -35,6 +35,18 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>twitter</string>
+		<string>whatsapp</string>
+		<string>fb</string>
+		<string>google</string>
+		<string>instagram</string>
+		<string>vk</string>
+		<string>fb-messenger</string>
+		<string>tg</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppleMusicUsageDescription</key>
@@ -55,6 +67,7 @@
 	<string>Access to photos is required to upload photos as required by the user</string>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
@@ -73,17 +86,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>comgooglemaps</string>
-		<string>twitter</string>
-		<string>whatsapp</string>
-		<string>fb</string>
-		<string>google</string>
-		<string>instagram</string>
-		<string>vk</string>
-		<string>fb-messenger</string>
-		<string>tg</string>
-	</array>
 </dict>
 </plist>

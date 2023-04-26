@@ -26,6 +26,11 @@ import RNBootSplash from 'react-native-bootsplash';
 import {URL} from 'react-native-url-polyfill';
 import changeNavigationBarColor from 'react-native-navigation-bar-color';
 
+import Player from './controllers/Player'
+
+const PlayerInstance = new Player()
+
+
 /** Contacts */
 import Contacts from 'react-native-contacts';
 const enableContacts = true;
@@ -146,6 +151,23 @@ class App extends Component {
         appState: newState,
       });
     });
+
+
+    PlayerInstance.setupPlayer()
+    // setTimeout(PlayerInstance.play, 25000)
+
+    this.invoke
+      .define("play", PlayerInstance.play)
+      .define("pause", PlayerInstance.pause)
+      .define("addToQueue", PlayerInstance.addToQueue)
+      .define("setQueue", PlayerInstance.setQueue)
+      .define("playNext", PlayerInstance.playNext)
+      .define("playPrevious", PlayerInstance.playPrevious)
+      .define("setVolume", PlayerInstance.setVolume)
+      .define("setRepeatMode", PlayerInstance.setRepeatMode)
+      .define("getCurrentTrack", PlayerInstance.getCurrentTrack)
+      .define("getCurrentState", PlayerInstance.getCurrentState)
+
 
     BackHandler.addEventListener('hardwareBackPress', this.backAction);
 
@@ -736,6 +758,7 @@ class App extends Component {
       this.permissionsGet();
     }
     this.firstLoadEnd();
+    PlayerInstance.bindFunctions(this.invoke)
     this.publishState('platform_os', Platform.OS); //Возвращаем операционку
   };
 
