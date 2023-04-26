@@ -48,7 +48,7 @@ OneSignal.setAppId('56349ade-09ba-45ea-94ba-88e78d57fa72');
  *  будет фулскрин приложение без шторки
  */
 const setFullscreenWithoutBar = false;
-const USER_AGENT = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/5322 (KHTML, like Gecko) Chrome/37.0.893.0 Mobile Safari/5322";
+const USER_AGENT = "Mozilla/5.0 (Linux; Android 5.0.1; Nokia 1000 wifi Build/GRK39F) AppleWebKit/533.12 (KHTML, like Gecko)  Chrome/50.0.1011.255 Mobile Safari/600.7"
 
 /** Если поставить
  *  setFullscreenWithBar = true
