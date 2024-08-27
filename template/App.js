@@ -215,9 +215,45 @@ class App extends Component {
       camera: PermissionsAndroid.PERMISSIONS.CAMERA,
       write: PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
     };
-  
+
     try {
       if (!PERMISSION_LIST[permissionName]) throw new Error("This permission can't be requested")
+      if (permissionName === 'read' && Platform.Version >= 33) {
+        const readImages = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
+        const readVideos = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO);
+        const readMediaUser = (Platform.Version > 33 ) ?  await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED) : true;
+
+        if (readImages && readVideos && readMediaUser) {
+          return {
+            currentPermissionStatus: true,
+            reason: 'granted'
+          }
+        } else {
+          const permissionsToRequest = [
+            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+            PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+          ];
+
+          if (Platform.Version > 33) permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED)
+
+          const response = await PermissionsAndroid.requestMultiple(permissionsToRequest);
+          if (response[PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES] === 'granted' &&
+            response[PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO] === 'granted' &&
+            response[PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED] === 'granted') {
+            return {
+              currentPermissionStatus: true,
+              reason: 'granted'
+            }
+          } else {
+            return {
+              currentPermissionStatus: false,
+              reason: 'denied'
+            }
+          }
+
+        }
+      }
+
       const currentPermissionStatus = await PermissionsAndroid.check(PERMISSION_LIST[permissionName]);
       if (currentPermissionStatus) {
         return {
@@ -230,7 +266,7 @@ class App extends Component {
           currentPermissionStatus: currentPermissionStatus,
           reason: response
         }
-      
+
     } catch (error) {
       Alert.alert('Get permission error: ', error.message);
     }
@@ -699,9 +735,7 @@ class App extends Component {
   triggerCenterButton = this.invoke.bind('centerButton');
 
   permissionsGet = async () => {
-    let read = PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-    );
+    
     let camera = PermissionsAndroid.check(
       PermissionsAndroid.PERMISSIONS.CAMERA,
     );
@@ -711,6 +745,57 @@ class App extends Component {
     let location = PermissionsAndroid.check(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     );
+
+    let read = null;
+    let readMediaUser = PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+    let readImages = PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+    let readVideos = PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+    // Android 13 (Version 33)
+    if (Platform.Version >= 33) {
+      readImages = PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
+      readVideos = PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO);
+    }
+    
+    // Android 14 (Version 34)
+    if (Platform.Version > 33) {
+      readMediaUser = PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED);
+    }
+
+    // For <= 12 android => use old permissions
+    if (Platform.Version <= 32) {
+      read = PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+      );
+    }
+    
+    if (Platform.Version >= 33) {
+      if (readImages !== PermissionsAndroid.RESULTS.GRANDTED &&
+        readImages !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+        );
+      }
+
+      if (readVideos !== PermissionsAndroid.RESULTS.GRANDTED &&
+        readVideos !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+        );
+      }
+    }
+
+    if (Platform.Version > 33) {
+      if (readMediaUser !== PermissionsAndroid.RESULTS.GRANDTED &&
+        readMediaUser !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED,
+        );
+      }
+    }
+
+    // let read = PermissionsAndroid.check(
+    //   PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+    // );
 
     if (enableContacts) {
         let contacts = PermissionsAndroid.check(
