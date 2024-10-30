@@ -904,7 +904,7 @@ class App extends Component {
               injectedJavaScript={INJECTED_JAVASCRIPT}
               ref={ref => (this.webview = ref)}
               onContentProcessDidTerminate={this.onContentProcessDidTerminate}
-              onShouldStartLoadWithRequest={this.handleWebViewNavigationStateChange}
+              onNavigationStateChange={this.handleWebViewNavigationStateChange}
               decelerationRate={'normal'}
               onMessage={this.invoke.listener}
               allowsBackForwardNavigationGestures={true}
@@ -952,7 +952,7 @@ class App extends Component {
               injectedJavaScript={INJECTED_JAVASCRIPT}
               ref={ref => (this.webview = ref)}
               onContentProcessDidTerminate={this.onContentProcessDidTerminate}
-              onShouldStartLoadWithRequest={this.handleWebViewNavigationStateChange}
+              onNavigationStateChange={this.handleWebViewNavigationStateChange}
               decelerationRate={'normal'}
               onMessage={this.invoke.listener}
               allowsBackForwardNavigationGestures={true}
