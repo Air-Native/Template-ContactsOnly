@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import {
   Alert,
   BackHandler,
@@ -14,16 +14,15 @@ import {
   AppState,
 } from 'react-native';
 
-import {WebView} from 'react-native-webview';
+import { WebView } from 'react-native-webview';
 import NetInfo from '@react-native-community/netinfo';
-// import OneSignal from 'react-native-onesignal';
 import createInvoke from 'react-native-webview-invoke/native';
 import FingerprintScanner from 'react-native-fingerprint-scanner';
 import Share from 'react-native-share';
-import {InAppBrowser} from 'react-native-inappbrowser-reborn';
+import { InAppBrowser } from 'react-native-inappbrowser-reborn';
 import Geolocation from '@react-native-community/geolocation';
 import RNBootSplash from 'react-native-bootsplash';
-import {URL} from 'react-native-url-polyfill';
+import { URL } from 'react-native-url-polyfill';
 import KeepAwake from 'react-native-keep-awake';
 import changeNavigationBarColor from 'react-native-navigation-bar-color';
 
@@ -38,13 +37,8 @@ const PlayerInstance = new Player()
 import Contacts from 'react-native-contacts';
 const enableContacts = true;
 
-/** IN-APP Purchase */
-//import * as RNIap from 'react-native-iap';
-const enableIAP = false;
-
 
 /** OneSignal App ID - тут ставит id приложения юзера для инициализации OneSignal */
-// OneSignal.setAppId('56349ade-09ba-45ea-94ba-88e78d57fa72');
 OneSignal.initialize();
 
 /** Если поставить
@@ -94,7 +88,7 @@ if (Platform.OS === "android") {
    * white icons? => true/false, if true -> icons white color
    * animated? => animate color change
    */
-changeNavigationBarColor("#000000", true, false);
+  changeNavigationBarColor("#000000", true, false);
 }
 
 const INJECTED_JAVASCRIPT = `(function() {
@@ -105,22 +99,11 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      iapEnabled: enableIAP === true, // set TRUE if need in-app purchases
-      contactsEnabled: enableContacts === true, //set TRUE if need native contacts
+      inAppBrowserAvailable: false,
       isConnected: true,
-      filePath: null,
-      fileData: null,
-      fileUri: null,
-      isAvailable: null,
       watchID: null,
       firstLoad: true,
-      productIds: [],
-      products: [],
-      headerColor: '#FFC529',
-      headerVisible: false,
       bgColor: '#FFF',
-      centerButtonFN: function () {},
-      rightButtonFN: function () {},
       appState: AppState.currentState,
       currentURL: userURL,
       canGoBack: false
@@ -128,11 +111,14 @@ class App extends Component {
   }
 
   componentDidMount() {
-    if (this.state.iapEnabled) {
-      RNIap.initConnection();
-    }
 
-    Linking.addEventListener('url', ({url}) => {
+    // Check in app browser availability
+    InAppBrowser.isAvailable().then(available => {
+      this.setState({ inAppBrowserAvailable: available });
+    });
+
+
+    Linking.addEventListener('url', ({ url }) => {
       if (this.webview && this.state.isConnected) {
         this.webview.injectJavaScript(
           `window.location.href = "${url.replace(
@@ -189,21 +175,11 @@ class App extends Component {
     this.invoke.define('getDeviceOS', this.getDeviceOS);
     this.invoke.define('showPrompt', OneSignal.showPrompt);
     this.invoke.define('getPermissionsUser', this.getPermissionsUser);
+    this.invoke.define('openExternalLink', this.openExternalLink);
 
     this.invoke.define('keepAwake', this.changeKeepAwake);
 
-    if (this.state.contactsEnabled) {
-      this.invoke.define('getContacts', this.getContacts);
-    }
-
-    if (this.state.iapEnabled) {
-      this.invoke.define('requestPurchase', this.requestPurchase);
-      this.invoke.define('fetchProducts', this.fetchProducts);
-      this.invoke.define('fetchSubscriptions', this.fetchSubscriptions);
-      this.invoke.define('restorePurchase', this.goToRestore);
-      this.invoke.define('getAllProducts', this.getAllProducts);
-      this.invoke.define('findPurchase', this.findPurchase);
-    }
+    this.invoke.define('getContacts', this.getContacts);
 
     NetInfo.addEventListener(state => {
       this.setState({
@@ -211,6 +187,10 @@ class App extends Component {
       });
       this.render();
     });
+  }
+
+  componentWillUnmount() {
+    this.appStateChecker.remove();
   }
 
   getPermissionsUser = async (permissionName) => {
@@ -226,7 +206,7 @@ class App extends Component {
       if (permissionName === 'read' && Platform.Version >= 33) {
         const readImages = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
         const readVideos = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO);
-        const readMediaUser = (Platform.Version > 33 ) ?  await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED) : true;
+        const readMediaUser = (Platform.Version > 33) ? await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED) : true;
 
         if (readImages && readVideos && readMediaUser) {
           return {
@@ -265,24 +245,38 @@ class App extends Component {
           currentPermissionStatus: currentPermissionStatus,
           reason: 'denied'
         }
-      } 
-        const response = await PermissionsAndroid.request(PERMISSION_LIST[permissionName]);
-        return {
-          currentPermissionStatus: currentPermissionStatus,
-          reason: response
-        }
+      }
+      const response = await PermissionsAndroid.request(PERMISSION_LIST[permissionName]);
+      return {
+        currentPermissionStatus: currentPermissionStatus,
+        reason: response
+      }
 
     } catch (error) {
       Alert.alert('Get permission error: ', error.message);
     }
   };
 
-  componentWillUnmount() {
-    if (this.state.iapEnabled) {
-      RNIap.endConnection();
+  /** Open External Link */
+  openExternalLink = (url = '', inAppBrowser = false) => {
+    try {
+      if (!url) return false;
+      if (inAppBrowser && this.state.inAppBrowserAvailable) {
+        InAppBrowser.open(url, {
+          modalPresentationStyle: 'fullScreen',
+        });
+        return;
+      }
+
+      Linking.canOpenURL(url)
+        .then(canOpen => {
+          if (canOpen) Linking.openURL(url);
+        })
+
+    } catch (error) {
+      console.error('Open external link error: ', error);
     }
-    this.appStateChecker.remove();
-  }
+  };
 
   /** Enable Keep Awake */
   changeKeepAwake = (shouldBeAwake) => {
@@ -290,7 +284,7 @@ class App extends Component {
       KeepAwake.activate();
     } else {
       KeepAwake.deactivate();
-    } 
+    }
   };
 
   /** Platform OS */
@@ -329,10 +323,10 @@ class App extends Component {
                 _p_birthday:
                   contact.birthday !== null && contact.birthday !== undefined
                     ? new Date(
-                        contact.birthday.year,
-                        contact.birthday.month,
-                        contact.birthday.day,
-                      )
+                      contact.birthday.year,
+                      contact.birthday.month,
+                      contact.birthday.day,
+                    )
                     : null,
                 _p_emailAddress:
                   contact.emailAddresses[0] !== undefined
@@ -351,158 +345,12 @@ class App extends Component {
   };
   /** -------- */
 
-  /** In-App functions */
-
-  /** Deprecated */
-  fetchProducts = async products => {
-    function onlyUnique(value, index, self) {
-      return self.indexOf(value) === index;
-    }
-
-    let list = await RNIap.getProducts(products);
-    let data;
-    if (this.state.products.length > 0) {
-      data = this.state.products.concat(list);
-    } else {
-      data = list;
-    }
-
-    data.filter(onlyUnique);
-
-    this.setState({
-      products: data,
-    });
-    return true;
-  };
-  /** Deprecated */
-  fetchSubscriptions = async subs => {
-    function onlyUnique(value, index, self) {
-      return self.indexOf(value) === index;
-    }
-    let list = await RNIap.getSubscriptions(subs);
-    let data;
-    if (this.state.products.length > 0) {
-      data = this.state.products.concat(list);
-    } else {
-      data = list;
-    }
-
-    data.filter(onlyUnique);
-    this.setState({
-      products: data,
-    });
-
-    return true;
-  };
-
-  requestPurchase = async (sku, isSubscription) => {
-    return await new Promise((resolve, reject) => {
-      if (isSubscription) {
-        RNIap.getSubscriptions([sku])
-          .then(subscriptionList => {
-            if (subscriptionList.length === 0) {
-              throw new Error('This subscription not found');
-            }
-            RNIap.requestPurchase(sku, false)
-              .then(
-                transactionSuccess => {
-                  resolve(transactionSuccess);
-                },
-                transactionFailed => {
-                  throw new Error(transactionFailed.message);
-                },
-              )
-              .catch(transactionError => {
-                reject('Error in transaction: ' + transactionError.message);
-              });
-          })
-          .catch(fetchError => {
-            Alert.alert('Purchase error', fetchError.message);
-            reject('Purchase error: ' + fetchError.message);
-          });
-      } else {
-        RNIap.getProducts([sku])
-          .then(productsList => {
-            if (productsList.length === 0) {
-              throw new Error('This product not found');
-            }
-            RNIap.requestPurchase(sku, false)
-              .then(
-                transactionSuccess => {
-                  resolve(transactionSuccess);
-                },
-                transactionFailed => {
-                  throw new Error(transactionFailed.message);
-                },
-              )
-              .catch(transactionError => {
-                reject('Error in transaction: ' + transactionError.message);
-              });
-          })
-          .catch(fetchError => {
-            Alert.alert('Purchase error', fetchError.message);
-            reject('Purchase error: ' + fetchError.message);
-          });
-      }
-    });
-  };
-  /** Deprecated */
-  getAllProducts = async () => {
-    var listOfProducts = [];
-    this.state.products.forEach(p => {
-      listOfProducts.push({
-        _p_Title: p.title,
-        '_p_Product ID': p.productId,
-        _p_Currency: p.currency,
-        _p_Price: p.price,
-      });
-    });
-    return listOfProducts;
-  };
-
-  goToRestore = (pack_name, product_id) => {
-    if (Platform.OS === 'ios') {
-      Linking.openURL('https://apps.apple.com/account/subscriptions');
-    } else {
-      if (
-        pack_name !== null &&
-        pack_name !== undefined &&
-        product_id !== null &&
-        product_id !== undefined
-      ) {
-        Linking.openURL(
-          `https://play.google.com/store/account/subscriptions?package=${pack_name}&sku=${product_id}`,
-        );
-      }
-    }
-  };
-
-  findPurchase = transactionId => {
-    return new Promise((resolve, reject) => {
-      RNIap.getAvailablePurchases().then(listOfPurchases => {
-        listOfPurchases.forEach(purchase => {
-          if (purchase.transactionId == transactionId) {
-            resolve(true);
-          }
-        });
-        resolve(false);
-      });
-    });
-  };
-
-  getPurchaseHistory = () => {
-    RNIap.clearTransactionIOS();
-    RNIap.getPurchaseHistory().then(history => {});
-  };
-  /** In-App End */
 
   /** Функция для отключения Splash Scree */
   firstLoadEnd = () => {
     if (this.state.firstLoad) {
       this.setState({
         firstLoad: false,
-        rightButtonFN: this.triggerRightButton,
-        centerButtonFN: this.triggerCenterButton,
       }); //Указываем что первая загрузка была и более сплэш скрин нам не нужен
       RNBootSplash.hide(); // Отключаем сплэш скрин
       Linking.getInitialURL().then(url => {
@@ -516,18 +364,6 @@ class App extends Component {
         }
       });
     }
-  };
-
-  toggleHeaderButton = () => {
-    this.setState({
-      headerVisible: !this.state.headerVisible,
-    });
-  };
-
-  setHeaderButtonColor = color => {
-    this.setState({
-      headerColor: color,
-    });
   };
 
   /** Status Bar Settings */
@@ -683,8 +519,8 @@ class App extends Component {
       });
   };
 
- backAction = e => {
-    if ( this.webview && this.state.canGoBack ) this.webview.goBack();
+  backAction = e => {
+    if (this.webview && this.state.canGoBack) this.webview.goBack();
     this.triggerEvent('back_button');
     return true;
   };
@@ -720,14 +556,9 @@ class App extends Component {
   /** Извлекаем прямо из бабла функции, тут же можно прописать загрузку файлов в bubble */
   publishState = this.invoke.bind('publishState');
   triggerEvent = this.invoke.bind('triggerEvent');
-  canUploadFile = this.invoke.bind('canUploadFile');
-  uploadFile = this.invoke.bind('uploadFile');
-
-  triggerRightButton = this.invoke.bind('rightButton');
-  triggerCenterButton = this.invoke.bind('centerButton');
 
   permissionsGet = async () => {
-    
+
     let camera = PermissionsAndroid.check(
       PermissionsAndroid.PERMISSIONS.CAMERA,
     );
@@ -747,7 +578,7 @@ class App extends Component {
       readImages = PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES);
       readVideos = PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO);
     }
-    
+
     // Android 14 (Version 34)
     if (Platform.Version > 33) {
       readMediaUser = PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_MEDIA_VISUAL_USER_SELECTED);
@@ -759,7 +590,7 @@ class App extends Component {
         PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
       );
     }
-    
+
     if (Platform.Version >= 33) {
       if (readImages !== PermissionsAndroid.RESULTS.GRANDTED &&
         readImages !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
@@ -790,18 +621,18 @@ class App extends Component {
     // );
 
     if (enableContacts) {
-        let contacts = PermissionsAndroid.check(
+      let contacts = PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+      );
+
+      if (
+        contacts !== PermissionsAndroid.RESULTS.GRANDTED &&
+        contacts !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
+      ) {
+        await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
         );
-
-        if (
-          contacts !== PermissionsAndroid.RESULTS.GRANDTED &&
-          contacts !== PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN
-        ) {
-          await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-          );
-        }
+      }
     }
     if (
       read !== PermissionsAndroid.RESULTS.GRANDTED &&
@@ -857,8 +688,8 @@ class App extends Component {
   onContentProcessDidTerminate = () => this.webview.reload();
 
   handleWebViewNavigationStateChange = (navState) => {
-    const {url} = navState;
-    
+    const { url } = navState;
+
     if (!url) return false;
 
     if (
