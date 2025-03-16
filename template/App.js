@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   Linking,
   AppState,
+  NativeModules,
 } from 'react-native';
 
 import { WebView } from 'react-native-webview';
@@ -31,6 +32,8 @@ import OneSignal from './controllers/OneSignal'
 import Player from './controllers/Player'
 
 const PlayerInstance = new Player()
+
+const { ImageClipboard } = NativeModules;
 
 
 /** Contacts */
@@ -177,6 +180,10 @@ class App extends Component {
     this.invoke.define('getPermissionsUser', this.getPermissionsUser);
     this.invoke.define('openExternalLink', this.openExternalLink);
 
+
+
+    this.invoke.define('copyBase64ImageToClipboard', this.copyBase64ImageToClipboard);
+
     this.invoke.define('keepAwake', this.changeKeepAwake);
 
     this.invoke.define('getContacts', this.getContacts);
@@ -192,6 +199,22 @@ class App extends Component {
   componentWillUnmount() {
     this.appStateChecker.remove();
   }
+
+  /** Copy Image To Clipboard */
+	copyBase64ImageToClipboard = (base64Image) => {
+		if (Platform.OS === 'ios') return;
+
+
+		const pureBase64 = base64Image.replace(/^data:image\/\w+;base64,/, ""); // Remove data prefix
+
+			ImageClipboard.copyBase64ImageToClipboard(pureBase64)
+				.then(() => {
+					console.log('Image copied to clipboard');
+				})
+				.catch((error) => {
+					console.error(error);
+				})
+	}
 
   getPermissionsUser = async (permissionName) => {
     const PERMISSION_LIST = {
