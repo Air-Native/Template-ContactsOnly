@@ -28,6 +28,7 @@ import KeepAwake from 'react-native-keep-awake';
 import changeNavigationBarColor from 'react-native-navigation-bar-color';
 
 import OneSignal from './controllers/OneSignal'
+import NativeTools from './controllers/NativeTools';
 
 import Player from './controllers/Player'
 
@@ -49,7 +50,9 @@ OneSignal.initialize();
  *  будет фулскрин приложение без шторки
  */
 const setFullscreenWithoutBar = false;
-const USER_AGENT = "Mozilla/5.0 (Linux; Android 5.0.1; Nokia 1000 wifi Build/GRK39F) AppleWebKit/533.12 (KHTML, like Gecko)  Chrome/50.0.1011.255 Mobile Safari/600.7"
+const USER_AGENT = Platform.OS === 'ios' 
+  ? "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3.1 Mobile/15E148 Safari/604.1" 
+  : "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Mobile Safari/537.36";
 
 /** Если поставить
  *  setFullscreenWithBar = true
@@ -180,7 +183,7 @@ class App extends Component {
     this.invoke.define('getPermissionsUser', this.getPermissionsUser);
     this.invoke.define('openExternalLink', this.openExternalLink);
 
-
+    this.invoke.define('getReview', NativeTools.getReview);
 
     this.invoke.define('copyBase64ImageToClipboard', this.copyBase64ImageToClipboard);
 
